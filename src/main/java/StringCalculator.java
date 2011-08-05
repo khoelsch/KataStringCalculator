@@ -8,12 +8,15 @@ import java.util.List;
  */
 public class StringCalculator {
 
-  private final static String[] DELIMITERS = {",", "\n"};
+  private final static String[] NUMBER_DELIMITERS = {",", "\n"};
 
-  static private boolean containsDelimiter(final String number) {
+  private final static String CUSTOM_MARKER = "//";
+  private final static String CUSTOM_DELIMITER = "\n";
+
+  static private boolean containsDelimiter(final String number, String[] delimiters) {
     int delimIndex = 0;
-    while (delimIndex < DELIMITERS.length) {
-      if (number.contains(DELIMITERS[delimIndex])) {
+    while (delimIndex < delimiters.length) {
+      if (number.contains(delimiters[delimIndex])) {
         return true;
       }
       ++delimIndex;
@@ -21,23 +24,23 @@ public class StringCalculator {
     return false;
   }
 
-  static private int firstHit(final String number) {
-    for (int i = 0; i < DELIMITERS.length; ++i) {
-      if (number.contains(DELIMITERS[i])) {
-        return number.indexOf(DELIMITERS[i]);
+  static private int firstHit(final String number, String[] delimiters) {
+    for (int i = 0; i < delimiters.length; ++i) {
+      if (number.contains(delimiters[i])) {
+        return number.indexOf(delimiters[i]);
       }
     }
 
     return -1;
   }
 
-  static private List<String> splitNumber(final String number) {
+  static private List<String> splitNumber(final String number, String[] delimiters) {
     List<String> numbers = new ArrayList<String>();
     String rest = number;
     int hitPos = 0;
 
-    while (containsDelimiter(rest)) {
-      hitPos = firstHit(rest);
+    while (containsDelimiter(rest, delimiters)) {
+      hitPos = firstHit(rest, delimiters);
       numbers.add(rest.substring(0, hitPos));
       rest = rest.substring(hitPos+1);
     }
@@ -48,17 +51,40 @@ public class StringCalculator {
     return numbers;
   }
 
+  static private String[] extractCustomDelimiter(final String number) {
+    String[] newDelimiters = new String[NUMBER_DELIMITERS.length + 1];
+
+    // copy existing delimiters
+    System.arraycopy(NUMBER_DELIMITERS, 0, newDelimiters, 0, NUMBER_DELIMITERS.length);
+
+    String customDelimiter = number.substring(number.indexOf(CUSTOM_MARKER)+CUSTOM_MARKER.length(),
+            number.indexOf(CUSTOM_DELIMITER));
+
+    newDelimiters[newDelimiters.length-1] = customDelimiter;
+
+    return newDelimiters;
+  }
+
   static int add(final String number) {
     if ("".equals(number) || "0".equals(number)) {
       return 0;
     }
 
+    String[] runtimeDelimiters = NUMBER_DELIMITERS;
+    String numberStr = number;
+
     try {
-      if (!containsDelimiter(number)) {
-        return Integer.valueOf(number).intValue();
+      if (!containsDelimiter(numberStr, runtimeDelimiters)) {
+        return Integer.valueOf(numberStr).intValue();
       }
 
-      final List<String> numbers = splitNumber(number);
+      // custom delimiter set?
+      if (number.startsWith(CUSTOM_MARKER)) {
+        runtimeDelimiters = extractCustomDelimiter(numberStr);
+        numberStr = number.substring(number.indexOf(CUSTOM_DELIMITER)+1);
+      }
+
+      final List<String> numbers = splitNumber(numberStr, runtimeDelimiters);
       int sum = 0;
       for (String num : numbers) {
         sum += Integer.valueOf(num).intValue();
